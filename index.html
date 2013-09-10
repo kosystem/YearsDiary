@@ -1,0 +1,227 @@
+<!--
+  Copyright (c) 2011 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not
+  use this file except in compliance with the License. You may obtain a copy of
+  the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  License for the specific language governing permissions and limitations under
+  the License.
+
+  To run this sample, replace YOUR API KEY with your application's API key.
+  It can be found at https://code.google.com/apis/console/?api=plus under API Access.
+  Activate the Google+ service at https://code.google.com/apis/console/ under Services
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <style type="text/css" media="screen">
+      <!--
+        body {
+          background-color: #D3D4D6;
+        }
+        #titles {
+          width: 400px;
+          margin: auto;
+          margin-bottom: 20px;
+        }
+        #title {
+          font-size: 40px;
+          color: #656A6D;
+        }
+        #subtitle {
+          font-size: 15px;
+          color: #656A6D;
+        }
+        .page {
+          background-color: #F8F8F8;
+          width: 30%;
+          float: left;
+          margin-left: 2%;
+          margin-bottom: 10px;
+        }
+        h1 {
+          background-color: #1C2124;
+          color: #F8F8F8;
+          padding-left: 10px;
+          padding-right: 10px;
+          margin: 0 0 0 0;
+        }
+        h2 {
+          margin: 0 0 0 0;
+        }
+        .diary {
+          margin-right: 10px;
+          margin-left:  10px;
+          padding-top: 5px;
+          border-top: solid 1px #D3D4D6;
+          font-size: 12px;
+          min-height: 100px;
+          color: #656A6D;
+        }
+      -->  
+    </style>
+    <title>YearsDiary</title>
+  </head>
+  <body>
+    <!--Add a button for the user to click to initiate auth sequence -->
+    <button id="authorize-button" style="visibility: hidden">Authorize</button>
+    <script type="text/javascript">
+      // Enter a client ID for a web application from the Google Developer Console.
+      // The provided clientId will only work if the sample is run directly from
+      // https://google-api-javascript-client.googlecode.com/hg/samples/authSample.html
+      // In your Developer Console project, add a JavaScript origin that corresponds to the domain
+      // where you will be running the script.
+      var clientId = '511439538153.apps.googleusercontent.com';
+
+      // Enter the API key from the Google Develoepr Console - to handle any unauthenticated
+      // requests in the code.
+      // The provided key works for this sample only when run from
+      // https://google-api-javascript-client.googlecode.com/hg/samples/authSample.html
+      // To use in your own application, replace this API key with your own.
+      var apiKey = 'AIzaSyAOz_iutDFdqWKd5zVzMo0z78IlDgjF4V8';
+
+      // To enter one or more authentication scopes, refer to the documentation for the API.
+      var scopes = ['https://www.googleapis.com/auth/calendar.readonly'];
+
+      // Use a button to handle authentication the first time.
+      function handleClientLoad() {
+        gapi.client.setApiKey(apiKey);
+        window.setTimeout(checkAuth,1);
+      }
+
+      function checkAuth() {
+        gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: true}, handleAuthResult);
+      }
+
+
+      function handleAuthResult(authResult) {
+        var authorizeButton = document.getElementById('authorize-button');
+        if (authResult && !authResult.error) {
+          authorizeButton.style.visibility = 'hidden';
+          makeApiCall();
+        } else {
+          authorizeButton.style.visibility = '';
+          authorizeButton.onclick = handleAuthClick;
+        }
+      }
+
+      function handleAuthClick(event) {
+        gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: false}, handleAuthResult);
+        return false;
+      }
+
+      function getCalendarList(year, month, day, ago, dayTag) {
+        gapi.client.load('calendar', 'v3', function(){
+          // リクエストメソッド＆パラメータを設定
+          var start = new Date(Date.UTC(year, month, day, 0, 0));
+          var end = new Date(Date.UTC(year, month, day, 23, 59));
+
+          var request = gapi.client.calendar.events.list({  // メソッド
+            'calendarId': 'primary',  // 取得したカレンダーID(または'primary')
+            'orderBy' : 'startTime',
+            'singleEvents' : true,
+            'timeMin' : start.toISOString(),
+            'timeMax' : end.toISOString()
+          });
+          // リクエスト実行
+          request.execute(function(resp){
+            console.debug(resp);
+            for (var i in resp.items){
+              // 予定開始日時/終了日時とイベントIDを表示
+              var a = resp.items[i];
+              jQuery(function($) {
+                $("<li>"+a.summary+"</li>").appendTo(dayTag + ' ' + ago + ' ul');
+              });
+            }
+          });
+        });
+      }
+
+      // Load the API and make an API call.  Display the results on the screen.
+      function makeApiCall() {
+        // ライブラリをロードする
+        var days = new Array('yesterday', 'today', 'tomorrow')
+        for (var j = -1; j <= 1; j++) {
+          var date = new Date();
+          date.setDate(date.getDate() + j);
+          for (var i = 0; i < 5; i++) {
+            var classTag = '#-' + i + 'year';
+            var dayTag = '#' +  days[j+1];
+            var resp = getCalendarList(
+              date.getFullYear()-i,
+              date.getMonth(), 
+              date.getDate(),
+              classTag,
+              dayTag
+              );
+          };
+        };
+
+        // gapi.client.load('calendar', 'v3', function(){
+        //   // リクエストメソッド設定(パラメータなし)
+        //   var request = gapi.client.calendar.calendarList.list();
+        //   // リクエスト実行
+        //   request.execute(function(resp){
+        //     console.debug(resp);
+        //     for (var i in resp.items){
+        //       // カレンダーIDとカレンダー名を表示
+        //       console.debug('id:' + resp.items[i].id + ' summary:' + resp.items[i].summary);
+        //       if (resp.items[i].summary == 'API Test'){
+        //         gcCalenderID = resp.items[i].id;
+        //         console.debug('API Test ID is ' + resp.items[i].id);
+        //         gapi.client.load('calendar', 'v3', function(){
+        //           // リクエストメソッド＆パラメータを設定
+        //           var request = gapi.client.calendar.events.list({  // メソッド
+        //             'calendarId': gcCalenderID,  // 取得したカレンダーID(または'primary')
+        //             'orderBy' : 'startTime',
+        //             'singleEvents' : true,
+        //             'timeMin' : "2013-08-02T00:00:00.0+0900",
+        //             'timeMax' : "2013-08-02T23:59:59.0+0900"
+        //           });
+        //           // リクエスト実行
+        //           request.execute(function(resp){
+        //             console.debug(resp);
+        //             for (var i in resp.items){
+        //               // 予定開始日時/終了日時とイベントIDを表示
+        //               var a = resp.items[i];
+        //               jQuery(function($) {
+        //                 $("<h1>"+a.summary+"</h1>").appendTo("body");
+        //               });
+        //             }
+        //           });
+        //         });
+        //       }
+        //     }
+        //   });
+        // });
+      }
+
+      jQuery(function($) {
+        //var days = new Array('Sun', 'Mon', 'Thu', 'Wed', 'Thr', 'Fry', 'Sat');
+        var days = new Array('yesterday', 'today', 'tomorrow')
+        for (var j = -1; j <= 1; j++) {
+          var date = new Date();
+          date.setDate(date.getDate() + j);
+          $('<div id=' + days[j+1] + ' class="page"><h1>' + (date.getMonth() + 1 ) + '/' + date.getDate() + '</h1></div>').appendTo('#content');
+          for (var i = 0; i < 5; i++)  {
+            $('<div id="-' + i + 'year" class="diary"><h2>' + (date.getFullYear() - i) + "</h2><ul></ul></div>").appendTo("#" + days[j+1]);
+          };
+        };
+      });
+
+    </script>
+    <script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+    <div id='titles'>
+    <Font id='title'>YearsDiary</font> <font id='subtitle'>for Google Calendar</font>
+    </div>
+    <div id="content"></div>
+  </body>
+</html>
